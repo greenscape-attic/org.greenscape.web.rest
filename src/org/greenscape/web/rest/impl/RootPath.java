@@ -22,6 +22,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.log.LogService;
 
 @Path("api")
@@ -46,12 +47,23 @@ public class RootPath {
 		throw new WebApplicationException(Response.status(Status.NOT_FOUND).entity("Unknown Model name").build());
 	}
 
+	@Path("/weblet")
+	public Object weblet() {
+		for (RestService service : restServices) {
+			if (service instanceof WebletResource) {
+				return service;
+			}
+		}
+		throw new WebApplicationException(Response.status(Status.NOT_FOUND).entity("Weblet Service not available")
+				.build());
+	}
+
 	@Activate
 	public void activate(ComponentContext ctx, Map<String, Object> config) {
 		context = ctx.getBundleContext();
 	}
 
-	@Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
+	@Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY)
 	public void setRestService(RestService restService) {
 		restServices.add(restService);
 	}
@@ -73,7 +85,7 @@ public class RootPath {
 					if (rankedService == null) {
 						rankedService = service;
 						for (ServiceReference<RestService> r : references) {
-							if (context.getService(r).getResourceName().equals(service.getResourceName())) {
+							if (context.getService(r).getClass().equals(service.getClass())) {
 								ref = r;
 								break;
 							}
@@ -84,7 +96,7 @@ public class RootPath {
 					} else {
 						ServiceReference<RestService> ref1 = null;
 						for (ServiceReference<RestService> r : references) {
-							if (context.getService(r).getResourceName().equals(service.getResourceName())) {
+							if (context.getService(r).getClass().equals(service.getClass())) {
 								ref1 = r;
 								break;
 							}

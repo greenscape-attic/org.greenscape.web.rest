@@ -22,19 +22,21 @@ import javax.ws.rs.core.UriInfo;
 import org.greenscape.core.service.Service;
 import org.greenscape.persistence.DocumentModel;
 import org.greenscape.persistence.annotations.Model;
+import org.greenscape.web.rest.RestConstants;
 import org.greenscape.web.rest.RestService;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
+import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.log.LogService;
 
-@Component(name = ModelResource.FACTORY_DS, configurationPolicy = ConfigurationPolicy.REQUIRE)
+@Component(name = RestConstants.MODEL_RESOURCE_FACTORY_DS, configurationPolicy = ConfigurationPolicy.REQUIRE)
 public class ModelResource implements RestService {
-	static final String FACTORY_DS = "org.greenscape.web.rest.ModelResource.factory";
 	private final static String PARAM_DEF_MODEL_ID = "{modelId}";
 	private Service service;
 	private Class<? extends DocumentModel> clazz;
@@ -105,22 +107,19 @@ public class ModelResource implements RestService {
 	}
 
 	@DELETE
-	public String deleteModel() {
+	public void deleteAll() {
 		service.delete(clazz);
-		return "OK";
 	}
 
 	@DELETE
 	@Path(PARAM_DEF_MODEL_ID)
-	public String deleteModel(@PathParam("modelId") String modelId) {
+	public void deleteModel(@PathParam("modelId") String modelId) {
 		service.delete(clazz, modelId);
-		return "OK";
 	}
 
 	@SuppressWarnings("unchecked")
 	@Activate
 	public void activate(ComponentContext ctx, Map<String, Object> config) {
-		System.out.println("???????????????-----------");
 		try {
 			clazz = (Class<? extends DocumentModel>) ctx.getBundleContext().getBundle((Long) config.get("bundleId"))
 					.loadClass((String) config.get("modelClass"));
@@ -131,7 +130,20 @@ public class ModelResource implements RestService {
 		}
 	}
 
-	@Reference(policy = ReferencePolicy.DYNAMIC)
+	@SuppressWarnings("unchecked")
+	@Modified
+	public void modified(ComponentContext ctx, Map<String, Object> config) {
+		try {
+			clazz = (Class<? extends DocumentModel>) ctx.getBundleContext().getBundle((Long) config.get("bundleId"))
+					.loadClass((String) config.get("modelClass"));
+		} catch (NumberFormatException | ClassNotFoundException e) {
+			if (logService != null) {
+				logService.log(LogService.LOG_ERROR, e.getMessage(), e);
+			}
+		}
+	}
+
+	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY)
 	public void setService(Service service) {
 		this.service = service;
 	}
@@ -149,8 +161,13 @@ public class ModelResource implements RestService {
 		this.logService = null;
 	}
 
+	@Override
+	public String toString() {
+		return clazz.getName();
+	}
+
 	protected void copy(DocumentModel entity, Map<String, String> param) {
-		for (String name : entity.getPropertyNames()) {
+		for (String name : param.keySet()) {
 			if (param.get(name) != null) {
 				entity.setProperty(name, param.get(name));
 			}
