@@ -64,6 +64,9 @@ public class RestResourcePublisher {
 	}
 
 	private void setupServices(BundleContext context) {
+		if (context == null) {
+			return;
+		}
 		ServiceReference<ConfigurationAdmin> configAdminRef = context.getServiceReference(ConfigurationAdmin.class);
 		ConfigurationAdmin confAdmin = context.getService(configAdminRef);
 		Configuration[] configurations;
