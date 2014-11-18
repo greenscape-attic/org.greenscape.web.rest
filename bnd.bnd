@@ -1,11 +1,13 @@
 Private-Package: org.greenscape.web.rest.impl
--buildpath: osgi.core;version=4.3,\
+-buildpath:  \
+	osgi.core;version=4.3,\
 	osgi.cmpn;version=4.3,\
 	junit.osgi,\
 	org.eclipse.osgi.services,\
 	javax.servlet,\
 	org.greenscape.persistence;version=latest,\
 	org.greenscape.core;version=latest,\
+	org.apache.shiro.core,\
 	org.amdatu.web.rest.jaxrs
 -dsannotations: *
 Bundle-Version: 0.1.0

@@ -11,6 +11,10 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.subject.Subject;
+import org.greenscape.core.ModelResource;
+import org.greenscape.core.ResourceRegistry;
 import org.greenscape.web.rest.RestService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
@@ -29,6 +33,7 @@ import org.osgi.service.log.LogService;
 @Component(service = Object.class)
 public class RootPath {
 	public List<RestService> restServices = new ArrayList<>();
+	private ResourceRegistry resourceRegistry;
 
 	private BundleContext context;
 	private LogService logService;
@@ -38,10 +43,29 @@ public class RootPath {
 		if (restServices.size() == 0) {
 			throw new WebApplicationException(Response.status(Status.NOT_FOUND).entity("No resource available").build());
 		}
+		ModelResource modelResource = resourceRegistry.getResourceByRemoteName(resourceName);
+		if (modelResource == null) {
+			throw new WebApplicationException(Response.status(Status.NOT_FOUND)
+					.entity("Unknown resource name: " + resourceName).build());
+		}
+		RestService defaultService = null;
 		for (RestService service : restServices) {
+			if (service.getResourceName().equals("<default>")) {
+				defaultService = service;
+			}
 			if (service.getResourceName().equalsIgnoreCase(resourceName)) {
 				RestService highestRankedService = findServiceByHighestRank(service.getResourceName());
 				return highestRankedService;
+			}
+		}
+		if (defaultService != null) {
+			return defaultService;
+		} else {
+			// defaultService may not have been assigned, search again
+			for (RestService service : restServices) {
+				if (service.getResourceName().equals("<default>")) {
+					return defaultService;
+				}
 			}
 		}
 		throw new WebApplicationException(Response.status(Status.NOT_FOUND).entity("Unknown Model name").build());
@@ -49,8 +73,16 @@ public class RootPath {
 
 	@Path("/weblet")
 	public Object weblet() {
+		Subject subject = SecurityUtils.getSubject();
+		if (!subject.isAuthenticated()) {
+			// throw new
+			// WebApplicationException(Response.status(Status.UNAUTHORIZED).entity("Not authenticated").build());
+		}
+		if (subject.hasRole("super_admin")) {
+			System.out.println(">>>>>>>>>>>>>>>>>>");
+		}
 		for (RestService service : restServices) {
-			if (service instanceof WebletResource) {
+			if (service instanceof WebletService) {
 				return service;
 			}
 		}
@@ -70,6 +102,15 @@ public class RootPath {
 
 	public void unsetRestService(RestService restService) {
 		restServices.remove(restService);
+	}
+
+	@Reference(policy = ReferencePolicy.DYNAMIC)
+	public void setResourceRegistry(ResourceRegistry resourceRegistry) {
+		this.resourceRegistry = resourceRegistry;
+	}
+
+	public void unsetResourceRegistry(ResourceRegistry resourceRegistry) {
+		this.resourceRegistry = null;
 	}
 
 	private RestService findServiceByHighestRank(String modelName) {

@@ -1,6 +1,5 @@
 package org.greenscape.web.rest.impl;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +14,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
-import org.greenscape.core.WebletItem;
+import org.greenscape.core.ResourceRegistry;
+import org.greenscape.core.WebletResource;
 import org.greenscape.web.rest.RestService;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
@@ -27,11 +27,11 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.log.LogService;
 
 @Component
-public class WebletResource implements RestService {
+public class WebletService implements RestService {
 	final static String RESOURCE_NAME = "Weblet";
 	private final static String PARAM_DEF_WEBLET_ID = "{webletId}";
 
-	private final List<WebletItem> weblets = new ArrayList<WebletItem>();
+	private ResourceRegistry resourceRegistry;
 
 	private BundleContext context;
 	private LogService logService;
@@ -43,17 +43,19 @@ public class WebletResource implements RestService {
 
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public List<WebletItem> list(@Context UriInfo uriInfo) {
-		return weblets;
+	public List<WebletResource> list(@Context UriInfo uriInfo) {
+		List<WebletResource> resources = resourceRegistry.getResources(WebletResource.class);
+		return resources;
 	}
 
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(PARAM_DEF_WEBLET_ID)
-	public WebletItem getWeblet(@PathParam("webletId") String webletId) {
-		for (WebletItem weblet : weblets) {
-			if (weblet.getId().equals(webletId)) {
-				return weblet;
+	public WebletResource getWeblet(@PathParam("webletId") String webletId) {
+		List<WebletResource> weblets = resourceRegistry.getResources(WebletResource.class);
+		for (WebletResource resource : weblets) {
+			if (resource.getId().equals(webletId)) {
+				return resource;
 			}
 		}
 		throw new WebApplicationException(Response.status(Status.NOT_FOUND)
@@ -65,13 +67,13 @@ public class WebletResource implements RestService {
 		context = ctx.getBundleContext();
 	}
 
-	@Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
-	public void setWeblet(WebletItem weblet) {
-		weblets.add(weblet);
+	@Reference(policy = ReferencePolicy.DYNAMIC)
+	public void setResourceRegistry(ResourceRegistry resourceRegistry) {
+		this.resourceRegistry = resourceRegistry;
 	}
 
-	public void unsetWeblet(WebletItem weblet) {
-		weblets.remove(weblet);
+	public void unsetResourceRegistry(ResourceRegistry resourceRegistry) {
+		this.resourceRegistry = null;
 	}
 
 	@Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
