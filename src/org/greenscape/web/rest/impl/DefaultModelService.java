@@ -39,7 +39,6 @@ public class DefaultModelService extends AbstractRestService implements RestServ
 		return "<default>";
 	}
 
-
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	public String addModel(@Context UriInfo uriInfo, Map<String, String> param) {
@@ -64,7 +63,7 @@ public class DefaultModelService extends AbstractRestService implements RestServ
 	public void updateModel(@Context UriInfo uriInfo, @PathParam("modelId") String modelId, Map<String, String> param) {
 		String resourceName = uriInfo.getPathParameters().get("name").get(0);
 		checkPermission(resourceName + ":1:" + "EDIT");
-		DocumentModel entity = service.find(resourceName, modelId);
+		DocumentModel entity = service.findByModelId(resourceName, modelId);
 		if (entity == null) {
 			throw new WebApplicationException(Response.status(Status.NOT_FOUND)
 					.entity("No model with id " + modelId + " exists").build());
@@ -106,6 +105,7 @@ public class DefaultModelService extends AbstractRestService implements RestServ
 		this.service = null;
 	}
 
+	@Override
 	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY)
 	public void setResourceRegistry(ResourceRegistry resourceRegistry) {
 		this.resourceRegistry = resourceRegistry;

@@ -53,7 +53,7 @@ public abstract class AbstractRestService implements RestService {
 		DocumentModel model = null;
 		String resourceName = uriInfo.getPathParameters().get("name").get(0);
 		checkPermission(resourceName + ":1:" + "VIEW");
-		model = service.find(resourceName, modelId);
+		model = service.findByModelId(resourceName, modelId);
 
 		if (model == null) {
 			throw new WebApplicationException(Response.status(Status.NOT_FOUND)
